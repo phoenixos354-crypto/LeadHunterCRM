@@ -511,6 +511,35 @@
   .fu-indicator.fu2 { background: rgba(255,107,53,0.15); color: var(--fu2); }
   .fu-indicator.fu5 { background: rgba(255,51,102,0.15); color: var(--fu5); }
   .fu-indicator.clear { display: none; }
+
+  /* Copy button */
+  .btn-copy {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(77,159,255,0.1);
+    border: 1px solid rgba(77,159,255,0.25);
+    color: var(--accent3);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-copy:hover { background: rgba(77,159,255,0.2); border-color: var(--accent3); }
+  .btn-copy.copied { background: rgba(0,255,136,0.1); border-color: var(--accent); color: var(--accent); }
+
+  .website-link {
+    color: var(--accent3);
+    font-size: 11px;
+    text-decoration: none;
+    display: block;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .website-link:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -581,9 +610,11 @@
           <th>Tgl Chat</th>
           <th>Nama Usaha</th>
           <th>WhatsApp</th>
+          <th>Website</th>
           <th>Hari Ke</th>
           <th>FU</th>
           <th>Status</th>
+          <th>Copywriting</th>
           <th></th>
         </tr>
       </thead>
@@ -618,6 +649,11 @@
       <label class="form-label">Nomor WhatsApp</label>
       <input class="form-input" id="inputWA" type="text" placeholder="Contoh: 628123456789" />
       <p class="form-hint">Format: 628xxxxxxxxx (tanpa + atau 0 di depan)</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Link Website Demo</label>
+      <input class="form-input" id="inputWebsite" type="text" placeholder="Contoh: https://tokumajujaya.my.id" />
+      <p class="form-hint">Link website yang sudah kamu buatkan untuk lead ini</p>
     </div>
     <div class="form-group">
       <label class="form-label">Tanggal Chat</label>
@@ -798,6 +834,12 @@
           </a>`
         : '<span style="color:var(--muted)">—</span>';
 
+      const websiteCol = lead.website
+        ? `<a class="website-link" href="${lead.website}" target="_blank" title="${lead.website}">🌐 ${lead.website.replace(/^https?:\/\//, '')}</a>`
+        : '<span style="color:var(--muted);font-size:11px;">—</span>';
+
+      const copyText = `Halo Kak, saya Azizi 🙏\nIseng-iseng saya buatkan website untuk ${lead.namaUsaha} — saya lihat rating kakak bagus banget di Google tapi sayang belum punya website sendiri.\nSilakan dicek dulu:\n🌐 ${lead.website || '[link website]'}\nKalau cocok, bisa dijadikan website resmi dengan domain sendiri.\n💰 Mulai Rp 750.000 (domain .my.id)\n💰 Atau Rp 1.500.000 sudah include domain .com + hosting 1 tahun\nTidak cocok juga tidak apa-apa 😊`;
+
       const statusClass = STATUS_CLASSES[lead.status] || 'Pending';
 
       const tr = document.createElement('tr');
@@ -807,11 +849,17 @@
         <td style="font-size:12px;">${lead.tgl || '—'}</td>
         <td style="font-weight:500;">${lead.namaUsaha || '—'}</td>
         <td>${waLink}</td>
+        <td>${websiteCol}</td>
         <td><span class="hari-badge ${hariClass}">${lead.hariKe} hari</span></td>
         <td>${fuBadge}</td>
         <td>
-          <button class="status-badge ${statusClass}" onclick="openStatusModal(${lead.rowIndex}, '${lead.namaUsaha}', '${lead.status}')">
+          <button class="status-badge ${statusClass}" onclick="openStatusModal(${lead.rowIndex}, '${lead.namaUsaha.replace(/'/g,"\\'")}', '${lead.status}')">
             ${STATUS_ICONS[lead.status] || '⏳'} ${lead.status}
+          </button>
+        </td>
+        <td>
+          <button class="btn-copy" onclick="copyCW(this, \`${copyText.replace(/`/g,'\\`')}\`)">
+            📋 Copy
           </button>
         </td>
         <td>
@@ -858,12 +906,12 @@
     }
   }
 
-  // ── ADD LEAD ──
   function openAdd() {
     if (!apiUrl) { toast('Setup API dulu ya!', 'error'); openSetup(); return; }
     setTodayDate();
     document.getElementById('inputNama').value = '';
     document.getElementById('inputWA').value = '';
+    document.getElementById('inputWebsite').value = '';
     document.getElementById('addModal').classList.add('open');
   }
   function closeAdd() { document.getElementById('addModal').classList.remove('open'); }
@@ -872,6 +920,7 @@
     const nama = document.getElementById('inputNama').value.trim();
     const wa = document.getElementById('inputWA').value.trim();
     const tgl = document.getElementById('inputTgl').value;
+    const website = document.getElementById('inputWebsite').value.trim();
     if (!nama || !wa) { toast('Nama usaha & nomor WA wajib diisi!', 'error'); return; }
 
     const btn = document.getElementById('btnSave');
@@ -879,7 +928,7 @@
     btn.textContent = 'Menyimpan...';
 
     try {
-      const res = await postAction({ action: 'addLead', namaUsaha: nama, wa, tgl });
+      const res = await postAction({ action: 'addLead', namaUsaha: nama, wa, tgl, website });
       if (res.error) throw new Error(res.error);
       closeAdd();
       toast('Lead berhasil ditambahkan! 🎉', 'success');
@@ -889,6 +938,29 @@
     }
     btn.disabled = false;
     btn.textContent = 'Simpan Lead';
+  }
+
+  // ── COPY COPYWRITING ──
+  function copyCW(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋 Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      // Fallback untuk browser lama
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.textContent = '✅ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
+    });
   }
 
   // ── DELETE ──
