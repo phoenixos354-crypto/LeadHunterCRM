@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lead Hunter CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #00ff88;
+    --accent2: #ff6b35;
+    --accent3: #4d9fff;
+    --text: #e8e8f0;
+    --muted: #6b6b88;
+    --danger: #ff4455;
+    --warn: #ffcc00;
+    --deal: #00ff88;
+    --pending: #ffcc00;
+    --nodeal: #ff4455;
+    --fu2: #ff6b35;
+    --fu5: #ff3366;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(0,255,136,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(77,159,255,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 24px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.92);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+
+  .api-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+    background: var(--surface2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .api-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+  .api-dot.connected { background: var(--accent); }
+  .api-dot.error { background: var(--danger); }
+
+  .btn-setup {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-setup:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── STATS ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    padding: 24px 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.total::before { background: var(--accent3); }
+  .stat-card.fu2::before { background: var(--fu2); }
+  .stat-card.fu5::before { background: var(--fu5); }
+  .stat-card.deal::before { background: var(--deal); }
+  .stat-card.nodeal::before { background: var(--nodeal); }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-card.total .stat-num { color: var(--accent3); }
+  .stat-card.fu2 .stat-num { color: var(--fu2); }
+  .stat-card.fu5 .stat-num { color: var(--fu5); }
+  .stat-card.deal .stat-num { color: var(--deal); }
+  .stat-card.nodeal .stat-num { color: var(--nodeal); }
+
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 32px 20px;
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,136,0.06);
+  }
+
+  .btn-add {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-add:hover { background: #00e57a; transform: translateY(-1px); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    padding: 0 32px 40px;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+    min-width: 700px;
+  }
+
+  thead th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 8px 16px;
+    text-align: left;
+    font-weight: 500;
+  }
+
+  tbody tr {
+    background: var(--surface);
+    border-radius: var(--radius);
+    transition: all 0.2s;
+    cursor: default;
+  }
+  tbody tr:hover { background: var(--surface2); transform: translateX(2px); }
+
+  tbody td {
+    padding: 14px 16px;
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td:first-child {
+    border-left: 1px solid var(--border);
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+  tbody td:last-child {
+    border-right: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+
+  /* FU badge on row */
+  tbody tr.needs-fu2 td:first-child { border-left: 3px solid var(--fu2); }
+  tbody tr.needs-fu5 td:first-child { border-left: 3px solid var(--fu5); }
+
+  /* WA link */
+  .wa-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .wa-link:hover { color: #00e57a; }
+  .wa-link svg { flex-shrink: 0; }
+
+  /* Hari badge */
+  .hari-badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .hari-badge.ok { background: rgba(0,255,136,0.1); color: var(--accent); }
+  .hari-badge.fu2 { background: rgba(255,107,53,0.15); color: var(--fu2); }
+  .hari-badge.fu5 { background: rgba(255,51,102,0.15); color: var(--fu5); }
+
+  /* Status badge */
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.2s;
+  }
+  .status-badge.Pending { background: rgba(255,204,0,0.12); color: var(--warn); border: 1px solid rgba(255,204,0,0.2); }
+  .status-badge.Deal { background: rgba(0,255,136,0.12); color: var(--deal); border: 1px solid rgba(0,255,136,0.2); }
+  .status-badge['No Deal'] { background: rgba(255,68,85,0.12); color: var(--danger); border: 1px solid rgba(255,68,85,0.2); }
+  .status-badge.no-deal { background: rgba(255,68,85,0.12); color: var(--danger); border: 1px solid rgba(255,68,85,0.2); }
+  .status-badge.fu2-status { background: rgba(255,107,53,0.12); color: var(--fu2); border: 1px solid rgba(255,107,53,0.2); }
+  .status-badge.fu5-status { background: rgba(255,51,102,0.12); color: var(--fu5); border: 1px solid rgba(255,51,102,0.2); }
+
+  /* Action buttons */
+  .action-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-size: 13px;
+  }
+  .action-btn:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,68,85,0.08); }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty h3 { font-family: 'Syne', sans-serif; font-size: 18px; margin-bottom: 8px; color: var(--text); }
+  .empty p { font-size: 13px; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
+    padding: 32px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+
+  .form-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
+  .form-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-save {
+    flex: 2;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .btn-save:hover { background: #00e57a; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── SETUP MODAL ── */
+  .setup-step {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .setup-step strong { color: var(--accent); }
+  .setup-step code {
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--accent3);
+  }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 999;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    animation: toastIn 0.3s ease;
+    display: flex; align-items: center; gap: 10px;
+    max-width: 320px;
+  }
+  .toast.success { border-color: var(--accent); }
+  .toast.error { border-color: var(--danger); }
+  @keyframes toastIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Loading spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    header { padding: 16px 20px; }
+    .stats { padding: 16px 20px; }
+    .toolbar { padding: 0 20px 16px; }
+    .table-wrap { padding: 0 20px 40px; }
+    .stat-num { font-size: 24px; }
+  }
+
+  /* Status dropdown */
+  .status-select {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+    padding: 0;
+  }
+  option { background: var(--surface2); color: var(--text); }
+
+  .fu-indicator {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .fu-indicator.fu2 { background: rgba(255,107,53,0.15); color: var(--fu2); }
+  .fu-indicator.fu5 { background: rgba(255,51,102,0.15); color: var(--fu5); }
+  .fu-indicator.clear { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      LEAD HUNTER
+    </div>
+    <div class="header-right">
+      <div class="api-status">
+        <div class="api-dot" id="apiDot"></div>
+        <span id="apiStatusText">Belum terhubung</span>
+      </div>
+      <button class="btn-setup" onclick="openSetup()">⚙ Setup API</button>
+    </div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card total">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">Total Lead</div>
+    </div>
+    <div class="stat-card fu2">
+      <div class="stat-num" id="statFu2">0</div>
+      <div class="stat-label">Perlu FU 2</div>
+    </div>
+    <div class="stat-card fu5">
+      <div class="stat-num" id="statFu5">0</div>
+      <div class="stat-label">Perlu FU 5</div>
+    </div>
+    <div class="stat-card deal">
+      <div class="stat-num" id="statDeal">0</div>
+      <div class="stat-label">Deal</div>
+    </div>
+    <div class="stat-card nodeal">
+      <div class="stat-num" id="statNodeal">0</div>
+      <div class="stat-label">No Deal</div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <input class="search-box" type="text" placeholder="🔍  Cari nama usaha atau nomor WA..." id="searchInput" oninput="renderTable()" />
+    <button class="filter-btn active" onclick="setFilter('all', this)">Semua</button>
+    <button class="filter-btn" onclick="setFilter('fu2', this)">⚡ FU 2</button>
+    <button class="filter-btn" onclick="setFilter('fu5', this)">🔥 FU 5</button>
+    <button class="filter-btn" onclick="setFilter('deal', this)">✅ Deal</button>
+    <button class="btn-add" onclick="openAdd()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Tambah Lead
+    </button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div id="loadingMsg" style="text-align:center;padding:60px;color:var(--muted);display:none;">
+      <div class="spinner" style="margin:0 auto 12px;width:24px;height:24px;border-width:3px;"></div>
+      <p style="font-size:13px;">Memuat data...</p>
+    </div>
+    <table id="leadsTable" style="display:none">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tgl Chat</th>
+          <th>Nama Usaha</th>
+          <th>WhatsApp</th>
+          <th>Hari Ke</th>
+          <th>FU</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyState" class="empty" style="display:none">
+      <div class="empty-icon">📋</div>
+      <h3>Belum ada lead</h3>
+      <p>Klik "Tambah Lead" untuk mulai mencatat prospek kamu</p>
+    </div>
+    <div id="noApiState" class="empty">
+      <div class="empty-icon">🔗</div>
+      <h3>Hubungkan Google Sheets dulu</h3>
+      <p>Klik <strong style="color:var(--accent)">⚙ Setup API</strong> di pojok kanan atas untuk mulai</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL TAMBAH LEAD -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h2>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#00ff88" stroke-width="1.5"/><path d="M10 6v8M6 10h8" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Tambah Lead Baru
+    </h2>
+    <div class="form-group">
+      <label class="form-label">Nama Usaha</label>
+      <input class="form-input" id="inputNama" type="text" placeholder="Contoh: Toko Maju Jaya" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nomor WhatsApp</label>
+      <input class="form-input" id="inputWA" type="text" placeholder="Contoh: 628123456789" />
+      <p class="form-hint">Format: 628xxxxxxxxx (tanpa + atau 0 di depan)</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tanggal Chat</label>
+      <input class="form-input" id="inputTgl" type="date" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdd()">Batal</button>
+      <button class="btn-save" id="btnSave" onclick="saveLead()">Simpan Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SETUP -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal" style="max-width:540px;">
+    <h2>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="#00ff88" stroke-width="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Setup Google Sheets
+    </h2>
+
+    <div class="setup-step">
+      <strong>1. Buat Google Apps Script</strong><br/>
+      Buka <code>script.google.com</code> → New Project → paste isi file <code>Code.gs</code>
+    </div>
+    <div class="setup-step">
+      <strong>2. Deploy sebagai Web App</strong><br/>
+      Klik <code>Deploy</code> → <code>New Deployment</code> → pilih type <code>Web app</code> → Execute as <code>Me</code> → Who has access: <code>Anyone</code> → Deploy
+    </div>
+    <div class="setup-step">
+      <strong>3. Copy Web App URL</strong><br/>
+      Setelah deploy, copy URL yang muncul dan paste di bawah ini
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Web App URL</label>
+      <input class="form-input" id="inputApiUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSetup()">Tutup</button>
+      <button class="btn-save" onclick="saveApiUrl()">Simpan & Tes Koneksi</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS DROPDOWN MODAL -->
+<div class="modal-overlay" id="statusModal">
+  <div class="modal" style="max-width:320px;">
+    <h2 style="font-size:16px;">Ubah Status Lead</h2>
+    <p id="statusModalName" style="color:var(--muted);font-size:13px;margin-bottom:20px;"></p>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="statusOptions"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" onclick="closeStatusModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ── STATE ──
+  let leads = [];
+  let apiUrl = localStorage.getItem('lh_api_url') || '';
+  let currentFilter = 'all';
+  let pendingStatusChange = null;
+
+  const STATUSES = ['Pending', 'FU Hari 2', 'FU Hari 5', 'Deal', 'No Deal'];
+  const STATUS_CLASSES = {
+    'Pending': 'Pending',
+    'FU Hari 2': 'fu2-status',
+    'FU Hari 5': 'fu5-status',
+    'Deal': 'Deal',
+    'No Deal': 'no-deal'
+  };
+  const STATUS_ICONS = {
+    'Pending': '⏳',
+    'FU Hari 2': '📩',
+    'FU Hari 5': '🔥',
+    'Deal': '✅',
+    'No Deal': '❌'
+  };
+
+  // ── INIT ──
+  window.onload = () => {
+    setTodayDate();
+    if (apiUrl) {
+      document.getElementById('inputApiUrl').value = apiUrl;
+      fetchLeads();
+    }
+  };
+
+  function setTodayDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('inputTgl').value = today;
+  }
+
+  // ── API ──
+  async function fetchLeads() {
+    if (!apiUrl) return;
+    showLoading(true);
+    try {
+      const res = await fetch(apiUrl + '?action=getLeads');
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      leads = data.leads || [];
+      setConnected(true);
+      renderStats();
+      renderTable();
+    } catch (e) {
+      setConnected(false);
+      toast('Gagal memuat data: ' + e.message, 'error');
+    }
+    showLoading(false);
+  }
+
+  async function postAction(body) {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      mode: 'cors'
+    });
+    return await res.json();
+  }
+
+  // ── RENDER ──
+  function renderStats() {
+    const today = new Date();
+    let fu2 = 0, fu5 = 0, deal = 0, nodeal = 0;
+    leads.forEach(l => {
+      if (l.hariKe >= 5) fu5++;
+      else if (l.hariKe >= 2) fu2++;
+      if (l.status === 'Deal') deal++;
+      if (l.status === 'No Deal') nodeal++;
+    });
+    document.getElementById('statTotal').textContent = leads.length;
+    document.getElementById('statFu2').textContent = fu2;
+    document.getElementById('statFu5').textContent = fu5;
+    document.getElementById('statDeal').textContent = deal;
+    document.getElementById('statNodeal').textContent = nodeal;
+  }
+
+  function renderTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    let filtered = leads.filter(l => {
+      const matchSearch = l.namaUsaha.toLowerCase().includes(q) || l.wa.includes(q);
+      if (!matchSearch) return false;
+      if (currentFilter === 'fu2') return l.hariKe >= 2 && l.hariKe < 5;
+      if (currentFilter === 'fu5') return l.hariKe >= 5;
+      if (currentFilter === 'deal') return l.status === 'Deal';
+      return true;
+    });
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    if (filtered.length === 0) {
+      document.getElementById('leadsTable').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('leadsTable').style.display = 'table';
+    document.getElementById('emptyState').style.display = 'none';
+
+    filtered.forEach((lead, i) => {
+      const trClass = lead.hariKe >= 5 ? 'needs-fu5' : lead.hariKe >= 2 ? 'needs-fu2' : '';
+      const hariClass = lead.hariKe >= 5 ? 'fu5' : lead.hariKe >= 2 ? 'fu2' : 'ok';
+      const fuBadge = lead.hariKe >= 5
+        ? '<span class="fu-indicator fu5">FU 5</span>'
+        : lead.hariKe >= 2
+        ? '<span class="fu-indicator fu2">FU 2</span>'
+        : '<span style="color:var(--muted);font-size:11px;">—</span>';
+
+      const waNum = lead.wa.replace(/\D/g, '');
+      const waLink = waNum
+        ? `<a class="wa-link" href="https://wa.me/${waNum}" target="_blank">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#00ff88"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.004 2.003c-5.515 0-9.997 4.482-9.997 9.997 0 1.76.463 3.463 1.34 4.962L2 22l5.232-1.306c1.439.784 3.074 1.202 4.772 1.202 5.515 0 9.997-4.482 9.997-9.997 0-5.514-4.482-9.996-9.997-9.996z"/></svg>
+            ${lead.wa}
+          </a>`
+        : '<span style="color:var(--muted)">—</span>';
+
+      const statusClass = STATUS_CLASSES[lead.status] || 'Pending';
+
+      const tr = document.createElement('tr');
+      tr.className = trClass;
+      tr.innerHTML = `
+        <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
+        <td style="font-size:12px;">${lead.tgl || '—'}</td>
+        <td style="font-weight:500;">${lead.namaUsaha || '—'}</td>
+        <td>${waLink}</td>
+        <td><span class="hari-badge ${hariClass}">${lead.hariKe} hari</span></td>
+        <td>${fuBadge}</td>
+        <td>
+          <button class="status-badge ${statusClass}" onclick="openStatusModal(${lead.rowIndex}, '${lead.namaUsaha}', '${lead.status}')">
+            ${STATUS_ICONS[lead.status] || '⏳'} ${lead.status}
+          </button>
+        </td>
+        <td>
+          <button class="action-btn" onclick="deleteLead(${lead.rowIndex})" title="Hapus">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1l11 11M12 1L1 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── STATUS MODAL ──
+  function openStatusModal(rowIndex, name, currentStatus) {
+    pendingStatusChange = { rowIndex, currentStatus };
+    document.getElementById('statusModalName').textContent = name;
+    const opts = document.getElementById('statusOptions');
+    opts.innerHTML = '';
+    STATUSES.forEach(s => {
+      const btn = document.createElement('button');
+      btn.style.cssText = `padding:12px;border-radius:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:13px;text-align:left;transition:all 0.2s;border:1px solid var(--border);background:${s === currentStatus ? 'var(--surface2)' : 'transparent'};color:${s === currentStatus ? 'var(--accent)' : 'var(--text)'};`;
+      btn.textContent = STATUS_ICONS[s] + '  ' + s;
+      if (s === currentStatus) btn.style.borderColor = 'var(--accent)';
+      btn.onclick = () => changeStatus(rowIndex, s);
+      opts.appendChild(btn);
+    });
+    document.getElementById('statusModal').classList.add('open');
+  }
+
+  function closeStatusModal() {
+    document.getElementById('statusModal').classList.remove('open');
+    pendingStatusChange = null;
+  }
+
+  async function changeStatus(rowIndex, newStatus) {
+    closeStatusModal();
+    try {
+      const res = await postAction({ action: 'updateStatus', rowIndex, status: newStatus });
+      if (res.error) throw new Error(res.error);
+      toast('Status diupdate ke ' + newStatus, 'success');
+      fetchLeads();
+    } catch (e) {
+      toast('Gagal update: ' + e.message, 'error');
+    }
+  }
+
+  // ── ADD LEAD ──
+  function openAdd() {
+    if (!apiUrl) { toast('Setup API dulu ya!', 'error'); openSetup(); return; }
+    setTodayDate();
+    document.getElementById('inputNama').value = '';
+    document.getElementById('inputWA').value = '';
+    document.getElementById('addModal').classList.add('open');
+  }
+  function closeAdd() { document.getElementById('addModal').classList.remove('open'); }
+
+  async function saveLead() {
+    const nama = document.getElementById('inputNama').value.trim();
+    const wa = document.getElementById('inputWA').value.trim();
+    const tgl = document.getElementById('inputTgl').value;
+    if (!nama || !wa) { toast('Nama usaha & nomor WA wajib diisi!', 'error'); return; }
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    try {
+      const res = await postAction({ action: 'addLead', lead: { namaUsaha: nama, wa, tgl } });
+      if (res.error) throw new Error(res.error);
+      closeAdd();
+      toast('Lead berhasil ditambahkan! 🎉', 'success');
+      fetchLeads();
+    } catch (e) {
+      toast('Gagal menyimpan: ' + e.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Simpan Lead';
+  }
+
+  // ── DELETE ──
+  async function deleteLead(rowIndex) {
+    if (!confirm('Yakin hapus lead ini?')) return;
+    try {
+      const res = await postAction({ action: 'deleteLead', rowIndex });
+      if (res.error) throw new Error(res.error);
+      toast('Lead dihapus', 'success');
+      fetchLeads();
+    } catch (e) {
+      toast('Gagal hapus: ' + e.message, 'error');
+    }
+  }
+
+  // ── SETUP ──
+  function openSetup() { document.getElementById('setupModal').classList.add('open'); }
+  function closeSetup() { document.getElementById('setupModal').classList.remove('open'); }
+
+  async function saveApiUrl() {
+    const url = document.getElementById('inputApiUrl').value.trim();
+    if (!url) { toast('URL tidak boleh kosong!', 'error'); return; }
+    apiUrl = url;
+    localStorage.setItem('lh_api_url', url);
+    closeSetup();
+    toast('Mencoba koneksi...', '');
+    await fetchLeads();
+  }
+
+  // ── FILTER ──
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  // ── UI HELPERS ──
+  function showLoading(show) {
+    document.getElementById('loadingMsg').style.display = show ? 'block' : 'none';
+    document.getElementById('leadsTable').style.display = show ? 'none' : '';
+    document.getElementById('noApiState').style.display = 'none';
+    if (!show && leads.length === 0) document.getElementById('emptyState').style.display = 'block';
+  }
+
+  function setConnected(ok) {
+    const dot = document.getElementById('apiDot');
+    const txt = document.getElementById('apiStatusText');
+    dot.className = 'api-dot ' + (ok ? 'connected' : 'error');
+    txt.textContent = ok ? 'Terhubung ke Sheets' : 'Gagal terhubung';
+    document.getElementById('noApiState').style.display = ok ? 'none' : 'block';
+  }
+
+  function toast(msg, type) {
+    const c = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.innerHTML = (type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️') + ' ' + msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+</script>
+</body>
+</html>
