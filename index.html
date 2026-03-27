@@ -735,12 +735,9 @@
   }
 
   async function postAction(body) {
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      mode: 'cors'
-    });
+    // Semua action via GET parameter untuk bypass CORS Google Apps Script
+    const params = new URLSearchParams(body);
+    const res = await fetch(apiUrl + '?' + params.toString());
     return await res.json();
   }
 
@@ -882,7 +879,7 @@
     btn.textContent = 'Menyimpan...';
 
     try {
-      const res = await postAction({ action: 'addLead', lead: { namaUsaha: nama, wa, tgl } });
+      const res = await postAction({ action: 'addLead', namaUsaha: nama, wa, tgl });
       if (res.error) throw new Error(res.error);
       closeAdd();
       toast('Lead berhasil ditambahkan! 🎉', 'success');
